@@ -71,29 +71,42 @@ src/
 
 ### Локальная разработка
 
-1. Установите Poetry:
+1. Клонируйте репозиторий:
+```bash
+git clone https://github.com/Alex214-code/yandex_tracker_analyzer.git
+cd yandex_tracker_analyzer
+```
+
+2. Установите Poetry:
 ```bash
 pip install poetry
 ```
 
-2. Установите зависимости:
+3. Установите зависимости:
 ```bash
 poetry install
 ```
 
-3. Создайте файл `.env` (см. `.env.example`):
+4. Создайте файл `.env` (см. `.env.example`):
 ```bash
 cp .env.example .env
 # Заполните реальными значениями
 ```
 
-4. Запустите сервер:
+5. Запустите сервер:
 ```bash
 poetry run python -m src.entrypoints.run
 ```
 
 ### Docker
 
+1. Клонируйте репозиторий:
+```bash
+git clone https://github.com/Alex214-code/yandex_tracker_analyzer.git
+cd yandex_tracker_analyzer
+```
+
+2. Соберите и запустите:
 ```bash
 # Сборка образа
 docker build -t yandex-tracker-analyzer .
