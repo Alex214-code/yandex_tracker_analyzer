@@ -1,0 +1,134 @@
+"""
+Точка входа приложения.
+
+Запускает FastAPI сервер с Swagger UI для генерации отчётов.
+"""
+
+import sys
+from contextlib import asynccontextmanager
+
+import uvicorn
+from fastapi import FastAPI
+from loguru import logger
+
+from src.adapters.primary.web import reports_router, system_router
+from src.settings import get_settings
+
+
+def configure_logging(settings) -> None:
+    """Настраивает логирование приложения."""
+    logger.remove()
+
+    # Формат логов
+    if settings.log_format == "json":
+        log_format = (
+            '{{"time":"{time:YYYY-MM-DDTHH:mm:ss.SSS}", '
+            '"level":"{level}", '
+            '"pid":{process}, '
+            '"message":"{message}"}}'
+        )
+    else:
+        log_format = (
+            "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | "
+            "PID:{process} | {message}"
+        )
+
+    # Вывод в stdout (для Docker)
+    logger.add(
+        sys.stdout,
+        format=log_format,
+        level=settings.log_level,
+        colorize=settings.log_format != "json",
+    )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Управление жизненным циклом приложения.
+
+    Выполняет инициализацию при старте и очистку при завершении.
+    """
+    settings = get_settings()
+    configure_logging(settings)
+
+    logger.info(f"Запуск {settings.app_name} v{settings.app_version}")
+    logger.info(f"Режим отладки: {settings.debug}")
+    logger.info(f"Целевые проекты: {settings.target_projects}")
+
+    yield
+
+    logger.info("Завершение работы приложения")
+
+
+def create_app() -> FastAPI:
+    """
+    Создаёт и настраивает FastAPI приложение.
+
+    Returns:
+        Настроенное FastAPI приложение.
+    """
+    settings = get_settings()
+
+    app = FastAPI(
+        title=settings.app_name,
+        description="""
+## Yandex Tracker Analyzer API
+
+Сервис для генерации Excel-отчётов по задачам Yandex Tracker.
+
+### Возможности:
+- **Помесячная разбивка** — одна строка = одна задача в одном месяце
+- **Учет статусов** — статус на начало месяца и переходы внутри месяца
+- **Активный пул** — логика "был в работе на начало или перешел в работу"
+- **Иерархия задач** — разделы определяются по корневой родительской задаче
+- **Уровень вложенности** — подсчёт глубины в иерархии
+
+### Использование:
+1. Откройте `/docs` для доступа к Swagger UI
+2. Выберите endpoint `/reports/generate`
+3. Укажите период (год/месяц начала и конца)
+4. Опционально укажите список проектов
+5. Нажмите "Execute" для скачивания Excel-отчёта
+
+### Формат отчёта:
+Excel-файл с листами:
+- **Все_Задачи** — полный реестр задач
+- **Анализ_В_Работе** — сводная по статусу "В работе"
+- **Сводная_по_разделам** — статистика по контейнерам
+- **Статусы_на_1_число** — распределение статусов на начало месяца
+        """,
+        version=settings.app_version,
+        lifespan=lifespan,
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
+    )
+
+    # Подключаем роутеры
+    app.include_router(system_router)
+    app.include_router(reports_router)
+
+    return app
+
+
+# Создаём приложение для uvicorn
+app = create_app()
+
+
+def main() -> None:
+    """Запускает сервер uvicorn."""
+    settings = get_settings()
+
+    uvicorn.run(
+        "src.entrypoints.run:app",
+        host=settings.host,
+        port=settings.port,
+        workers=settings.workers,
+        reload=settings.debug,
+        log_level=settings.log_level.lower(),
+    )
+
+
+if __name__ == "__main__":
+    main()
