@@ -101,3 +101,13 @@ class TrackerPort(ABC):
             Список изменений статуса.
         """
         pass
+
+    @abstractmethod
+    def get_all_projects(self) -> List[Dict]:
+        """
+        Получает список всех доступных проектов из Yandex Tracker.
+
+        Returns:
+            Список проектов с полями id, name, description.
+        """
+        pass

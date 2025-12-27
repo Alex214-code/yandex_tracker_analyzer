@@ -1,20 +1,33 @@
-"""Web 040?B5@ FastAPI."""
+"""Web адаптер FastAPI."""
 
-from .router import reports_router, system_router
+from .router import projects_router, reports_router, system_router
 from .schemas import (
+    AddProjectRequest,
+    AllTrackerProjectsResponse,
+    DefaultProjectsResponse,
     ErrorResponse,
     HealthResponse,
-    ProjectListResponse,
+    ProjectOperationResponse,
+    RemoveProjectRequest,
     ReportRequestSchema,
     ReportStatusResponse,
+    SetDefaultProjectsRequest,
+    TrackerProjectInfo,
 )
 
 __all__ = [
     "reports_router",
+    "projects_router",
     "system_router",
     "ReportRequestSchema",
     "ErrorResponse",
     "HealthResponse",
-    "ProjectListResponse",
     "ReportStatusResponse",
+    "TrackerProjectInfo",
+    "AllTrackerProjectsResponse",
+    "DefaultProjectsResponse",
+    "SetDefaultProjectsRequest",
+    "AddProjectRequest",
+    "RemoveProjectRequest",
+    "ProjectOperationResponse",
 ]

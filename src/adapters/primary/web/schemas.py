@@ -102,3 +102,78 @@ class ReportStatusResponse(BaseModel):
     tasks_count: int = Field(0, description="Количество задач в отчёте")
     filename: Optional[str] = Field(None, description="Имя файла отчёта")
     error: Optional[str] = Field(None, description="Сообщение об ошибке")
+
+
+# --- Схемы для управления проектами ---
+
+
+class TrackerProjectInfo(BaseModel):
+    """Информация о проекте из Yandex Tracker."""
+
+    id: Optional[str] = Field(None, description="ID проекта в Tracker")
+    name: str = Field(..., description="Название проекта")
+    description: str = Field("", description="Описание проекта")
+
+
+class AllTrackerProjectsResponse(BaseModel):
+    """Ответ со списком всех проектов из Yandex Tracker."""
+
+    projects: List[TrackerProjectInfo] = Field(
+        ..., description="Список всех проектов из Tracker"
+    )
+    total: int = Field(..., description="Общее количество проектов")
+
+
+class DefaultProjectsResponse(BaseModel):
+    """Ответ со списком проектов по умолчанию."""
+
+    projects: List[str] = Field(..., description="Список проектов по умолчанию")
+    source: str = Field(
+        ...,
+        description="Источник настроек: 'user_settings' или 'env_config'",
+    )
+
+
+class SetDefaultProjectsRequest(BaseModel):
+    """Запрос на установку списка проектов по умолчанию."""
+
+    projects: List[str] = Field(
+        ...,
+        min_length=1,
+        description="Список названий проектов",
+        examples=[
+            [
+                "НорНикель НОФ (Тех. Поддержка)",
+                "УГМК Святогор (Тех. Поддержка)",
+            ]
+        ],
+    )
+
+
+class AddProjectRequest(BaseModel):
+    """Запрос на добавление проекта в список по умолчанию."""
+
+    project_name: str = Field(
+        ...,
+        min_length=1,
+        description="Название проекта для добавления",
+        examples=["НорНикель НОФ (Тех. Поддержка)"],
+    )
+
+
+class RemoveProjectRequest(BaseModel):
+    """Запрос на удаление проекта из списка по умолчанию."""
+
+    project_name: str = Field(
+        ...,
+        min_length=1,
+        description="Название проекта для удаления",
+    )
+
+
+class ProjectOperationResponse(BaseModel):
+    """Ответ на операцию с проектом."""
+
+    success: bool = Field(..., description="Успешность операции")
+    message: str = Field(..., description="Сообщение о результате")
+    projects: List[str] = Field(..., description="Текущий список проектов")

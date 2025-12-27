@@ -1,11 +1,10 @@
 """
 FastAPI роутеры.
 
-Определяет REST API endpoints для работы с отчётами.
+Определяет REST API endpoints для работы с отчётами и проектами.
 """
 
 from datetime import datetime
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -13,19 +12,30 @@ from fastapi.responses import Response
 from src.adapters.primary.web.dependencies import (
     get_cached_settings,
     get_generate_report_use_case,
+    get_tracker_adapter,
+    get_user_settings,
 )
 from src.adapters.primary.web.schemas import (
+    AddProjectRequest,
+    AllTrackerProjectsResponse,
+    DefaultProjectsResponse,
     ErrorResponse,
     HealthResponse,
-    ProjectListResponse,
+    ProjectOperationResponse,
+    RemoveProjectRequest,
     ReportRequestSchema,
     ReportStatusResponse,
+    SetDefaultProjectsRequest,
+    TrackerProjectInfo,
 )
-from src.core.application.use_cases import GenerateReportUseCase, ReportRequest
+from src.core.application.use_cases import ReportRequest
 from src.settings import Settings
 
 # Роутер для отчётов
 reports_router = APIRouter(prefix="/reports", tags=["Отчёты"])
+
+# Роутер для управления проектами
+projects_router = APIRouter(prefix="/projects", tags=["Проекты"])
 
 # Роутер для системных endpoints
 system_router = APIRouter(tags=["Система"])
@@ -48,17 +58,175 @@ async def health_check(
     )
 
 
-@system_router.get(
-    "/projects",
-    response_model=ProjectListResponse,
-    summary="Список проектов",
-    description="Возвращает список проектов по умолчанию для выгрузки.",
+# --- Endpoints для управления проектами ---
+
+
+@projects_router.get(
+    "/tracker",
+    response_model=AllTrackerProjectsResponse,
+    summary="Все проекты из Tracker",
+    description="""
+Получает список ВСЕХ доступных проектов из Yandex Tracker.
+
+Используйте этот endpoint, чтобы узнать какие проекты существуют
+и затем выбрать нужные для выгрузки.
+    """,
 )
-async def get_projects(
+async def get_all_tracker_projects(
     settings: Settings = Depends(get_cached_settings),
-) -> ProjectListResponse:
-    """Возвращает список доступных проектов."""
-    return ProjectListResponse(projects=settings.target_projects)
+) -> AllTrackerProjectsResponse:
+    """Получает все проекты из Yandex Tracker API."""
+    tracker = get_tracker_adapter(settings)
+    raw_projects = tracker.get_all_projects()
+
+    projects = [
+        TrackerProjectInfo(
+            id=p.get("id"),
+            name=p.get("name", ""),
+            description=p.get("description", ""),
+        )
+        for p in raw_projects
+    ]
+
+    return AllTrackerProjectsResponse(
+        projects=projects,
+        total=len(projects),
+    )
+
+
+@projects_router.get(
+    "/default",
+    response_model=DefaultProjectsResponse,
+    summary="Проекты по умолчанию",
+    description="""
+Возвращает текущий список проектов по умолчанию.
+
+Если настроен пользовательский список - вернёт его.
+Иначе вернёт список из конфигурации (.env).
+    """,
+)
+async def get_default_projects(
+    settings: Settings = Depends(get_cached_settings),
+) -> DefaultProjectsResponse:
+    """Получает список проектов по умолчанию."""
+    user_settings = get_user_settings()
+
+    if user_settings.has_default_projects():
+        return DefaultProjectsResponse(
+            projects=user_settings.get_default_projects(),
+            source="user_settings",
+        )
+
+    return DefaultProjectsResponse(
+        projects=settings.target_projects,
+        source="env_config",
+    )
+
+
+@projects_router.put(
+    "/default",
+    response_model=ProjectOperationResponse,
+    summary="Установить проекты по умолчанию",
+    description="""
+Устанавливает новый список проектов по умолчанию.
+
+Этот список будет использоваться при генерации отчётов,
+если не указаны конкретные проекты в запросе.
+
+**Важно:** Полностью заменяет текущий список.
+    """,
+)
+async def set_default_projects(
+    request: SetDefaultProjectsRequest,
+) -> ProjectOperationResponse:
+    """Устанавливает список проектов по умолчанию."""
+    user_settings = get_user_settings()
+    user_settings.set_default_projects(request.projects)
+
+    return ProjectOperationResponse(
+        success=True,
+        message=f"Установлено {len(request.projects)} проектов по умолчанию",
+        projects=request.projects,
+    )
+
+
+@projects_router.post(
+    "/default/add",
+    response_model=ProjectOperationResponse,
+    summary="Добавить проект",
+    description="Добавляет проект в список по умолчанию.",
+)
+async def add_default_project(
+    request: AddProjectRequest,
+) -> ProjectOperationResponse:
+    """Добавляет проект в список по умолчанию."""
+    user_settings = get_user_settings()
+
+    if user_settings.add_project(request.project_name):
+        return ProjectOperationResponse(
+            success=True,
+            message=f'Проект "{request.project_name}" добавлен',
+            projects=user_settings.get_default_projects(),
+        )
+
+    return ProjectOperationResponse(
+        success=False,
+        message=f'Проект "{request.project_name}" уже в списке',
+        projects=user_settings.get_default_projects(),
+    )
+
+
+@projects_router.post(
+    "/default/remove",
+    response_model=ProjectOperationResponse,
+    summary="Удалить проект",
+    description="Удаляет проект из списка по умолчанию.",
+)
+async def remove_default_project(
+    request: RemoveProjectRequest,
+) -> ProjectOperationResponse:
+    """Удаляет проект из списка по умолчанию."""
+    user_settings = get_user_settings()
+
+    if user_settings.remove_project(request.project_name):
+        return ProjectOperationResponse(
+            success=True,
+            message=f'Проект "{request.project_name}" удалён',
+            projects=user_settings.get_default_projects(),
+        )
+
+    return ProjectOperationResponse(
+        success=False,
+        message=f'Проект "{request.project_name}" не найден в списке',
+        projects=user_settings.get_default_projects(),
+    )
+
+
+@projects_router.delete(
+    "/default",
+    response_model=ProjectOperationResponse,
+    summary="Сбросить на настройки из .env",
+    description="""
+Удаляет пользовательский список проектов.
+
+После этого будет использоваться список из конфигурации (.env).
+    """,
+)
+async def reset_default_projects(
+    settings: Settings = Depends(get_cached_settings),
+) -> ProjectOperationResponse:
+    """Сбрасывает пользовательские настройки проектов."""
+    user_settings = get_user_settings()
+    user_settings.set_default_projects([])
+
+    return ProjectOperationResponse(
+        success=True,
+        message="Настройки сброшены. Используется список из .env",
+        projects=settings.target_projects,
+    )
+
+
+# --- Endpoints для отчётов ---
 
 
 @reports_router.post(
@@ -70,25 +238,17 @@ async def get_projects(
 **Параметры:**
 - `start_year`, `start_month` — начало периода
 - `end_year`, `end_month` — конец периода
-- `projects` — список проектов (опционально, по умолчанию берутся из настроек)
+- `projects` — список проектов (опционально)
 
-**Возвращает:**
-- Excel-файл (.xlsx) с несколькими листами:
-  - **Все_Задачи** — полный реестр задач
-  - **Анализ_В_Работе** — сводная по статусу "В работе"
-  - **Сводная_по_разделам** — статистика по контейнерам
-  - **Статусы_на_1_число** — распределение статусов на начало месяца
+**Если projects не указан:**
+1. Используется пользовательский список (если настроен через `/projects/default`)
+2. Иначе используется список из конфигурации (.env)
 
-**Пример использования:**
-Для отчёта за октябрь-ноябрь 2025 по всем проектам:
-```json
-{
-  "start_year": 2025,
-  "start_month": 10,
-  "end_year": 2025,
-  "end_month": 11
-}
-```
+**Возвращает Excel-файл с листами:**
+- **Все_Задачи** — полный реестр задач
+- **Анализ_В_Работе** — сводная по статусу "В работе"
+- **Сводная_по_разделам** — статистика по контейнерам
+- **Статусы_на_1_число** — распределение статусов на начало месяца
     """,
     responses={
         200: {
@@ -122,7 +282,15 @@ async def generate_report(
         )
 
     # Определяем список проектов
-    projects = request.projects or settings.target_projects
+    if request.projects:
+        projects = request.projects
+    else:
+        # Проверяем пользовательские настройки
+        user_settings = get_user_settings()
+        if user_settings.has_default_projects():
+            projects = user_settings.get_default_projects()
+        else:
+            projects = settings.target_projects
 
     # Создаём use case и выполняем
     use_case = get_generate_report_use_case(settings)
@@ -178,7 +346,15 @@ async def check_report_params(
             error="Начало периода не может быть позже конца периода",
         )
 
-    projects = request.projects or settings.target_projects
+    # Определяем проекты
+    if request.projects:
+        projects = request.projects
+    else:
+        user_settings = get_user_settings()
+        if user_settings.has_default_projects():
+            projects = user_settings.get_default_projects()
+        else:
+            projects = settings.target_projects
 
     # Формируем имя файла
     filename = (

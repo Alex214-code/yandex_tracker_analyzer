@@ -254,3 +254,49 @@ class YandexTrackerAdapter(TrackerPort):
         return datetime.fromisoformat(
             dt_string.replace("Z", "+00:00")
         ).replace(tzinfo=None)
+
+    def get_all_projects(self) -> List[Dict]:
+        """
+        Получает список всех доступных проектов из Yandex Tracker.
+
+        Returns:
+            Список проектов с полями id, name, description.
+        """
+        projects: List[Dict] = []
+        page = 1
+
+        logger.info("Запрашиваю список всех проектов из Yandex Tracker...")
+
+        while True:
+            try:
+                response = self._client.get(
+                    f"{self._base_url}/projects",
+                    params={"perPage": 100, "page": page},
+                )
+
+                if response.status_code == 429:
+                    logger.warning("Rate limit, ожидаю 5 сек...")
+                    time.sleep(5)
+                    continue
+
+                response.raise_for_status()
+                data = response.json()
+
+                if not data:
+                    break
+
+                for project in data:
+                    projects.append({
+                        "id": project.get("id"),
+                        "name": project.get("name", ""),
+                        "description": project.get("description", ""),
+                    })
+
+                page += 1
+
+            except httpx.HTTPError as e:
+                logger.error(f"Ошибка при получении списка проектов: {e}")
+                break
+
+        logger.info(f"Найдено {len(projects)} проектов")
+        return projects

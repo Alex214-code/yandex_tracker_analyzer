@@ -11,7 +11,7 @@ import uvicorn
 from fastapi import FastAPI
 from loguru import logger
 
-from src.adapters.primary.web import reports_router, system_router
+from src.adapters.primary.web import projects_router, reports_router, system_router
 from src.settings import get_settings
 
 
@@ -77,19 +77,21 @@ def create_app() -> FastAPI:
 
 Сервис для генерации Excel-отчётов по задачам Yandex Tracker.
 
+**Предназначен для сервис-менеджеров**, которым нужно регулярно формировать
+отчёты для руководства без привлечения программистов.
+
+### Быстрый старт:
+1. **Настройте проекты**: `/projects/tracker` — посмотреть все доступные проекты
+2. **Сохраните список**: `/projects/default` — установить проекты по умолчанию
+3. **Генерируйте отчёт**: `/reports/generate` — получить Excel-файл
+
 ### Возможности:
+- **Динамический список проектов** — загружается из Yandex Tracker
+- **Настраиваемый список по умолчанию** — сохраняется между сессиями
 - **Помесячная разбивка** — одна строка = одна задача в одном месяце
 - **Учет статусов** — статус на начало месяца и переходы внутри месяца
 - **Активный пул** — логика "был в работе на начало или перешел в работу"
 - **Иерархия задач** — разделы определяются по корневой родительской задаче
-- **Уровень вложенности** — подсчёт глубины в иерархии
-
-### Использование:
-1. Откройте `/docs` для доступа к Swagger UI
-2. Выберите endpoint `/reports/generate`
-3. Укажите период (год/месяц начала и конца)
-4. Опционально укажите список проектов
-5. Нажмите "Execute" для скачивания Excel-отчёта
 
 ### Формат отчёта:
 Excel-файл с листами:
@@ -107,6 +109,7 @@ Excel-файл с листами:
 
     # Подключаем роутеры
     app.include_router(system_router)
+    app.include_router(projects_router)
     app.include_router(reports_router)
 
     return app

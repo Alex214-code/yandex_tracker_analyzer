@@ -8,9 +8,13 @@ from functools import lru_cache
 
 from src.adapters.secondary.excel_export import ExcelExportAdapter
 from src.adapters.secondary.tracker_api import YandexTrackerAdapter
+from src.adapters.secondary.user_settings import UserSettingsAdapter
 from src.core.application.use_cases import GenerateReportUseCase
 from src.core.domain.services import PivotBuilderService, StatusAnalyzerService
 from src.settings import Settings, get_settings
+
+# Глобальный экземпляр для сохранения состояния между запросами
+_user_settings_adapter: UserSettingsAdapter | None = None
 
 
 @lru_cache
@@ -57,3 +61,15 @@ def get_generate_report_use_case(
         status_analyzer=get_status_analyzer(),
         pivot_builder=get_pivot_builder(),
     )
+
+
+def get_user_settings() -> UserSettingsAdapter:
+    """
+    Возвращает адаптер пользовательских настроек.
+
+    Использует singleton для сохранения состояния между запросами.
+    """
+    global _user_settings_adapter
+    if _user_settings_adapter is None:
+        _user_settings_adapter = UserSettingsAdapter()
+    return _user_settings_adapter
