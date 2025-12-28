@@ -16,13 +16,11 @@ from src.adapters.primary.web.dependencies import (
     get_user_settings,
 )
 from src.adapters.primary.web.schemas import (
-    AddProjectRequest,
     DefaultProjectsResponse,
     ErrorResponse,
     HealthResponse,
     ProjectFilterValuesResponse,
     ProjectOperationResponse,
-    RemoveProjectRequest,
     ReportRequestSchema,
     ReportStatusResponse,
     SetDefaultProjectsRequest,
@@ -63,13 +61,15 @@ async def health_check(
 @projects_router.get(
     "/available",
     response_model=ProjectFilterValuesResponse,
-    summary="Все доступные проекты",
+    summary="Получить все доступные проекты",
     description="""
-Получает список всех доступных проектов из Yandex Tracker.
+Возвращает список всех проектов, которые существуют в Yandex Tracker.
 
-Сервис анализирует задачи и возвращает уникальные названия проектов.
-Эти значения можно использовать для настройки списка по умолчанию
-или передать напрямую в `/reports/generate`.
+Используйте этот endpoint, чтобы узнать какие проекты доступны
+для выгрузки отчётов. Полученные названия можно:
+
+- Сохранить как список по умолчанию через `PUT /projects/default`
+- Передать напрямую в запрос `POST /reports/generate`
     """,
 )
 async def get_available_projects(
@@ -88,12 +88,13 @@ async def get_available_projects(
 @projects_router.get(
     "/default",
     response_model=DefaultProjectsResponse,
-    summary="Проекты по умолчанию",
+    summary="Посмотреть текущий список проектов",
     description="""
-Возвращает текущий список проектов по умолчанию.
+Показывает, какие проекты сейчас используются для генерации отчётов.
 
-Если настроен пользовательский список - вернёт его.
-Иначе вернёт список из конфигурации (.env).
+В ответе указан источник настроек:
+- `user_settings` — список был изменён через `PUT /projects/default`
+- `env_config` — используются начальные настройки из файла .env
     """,
 )
 async def get_default_projects(
@@ -117,14 +118,14 @@ async def get_default_projects(
 @projects_router.put(
     "/default",
     response_model=ProjectOperationResponse,
-    summary="Установить проекты по умолчанию",
+    summary="Изменить список проектов по умолчанию",
     description="""
-Устанавливает новый список проектов по умолчанию.
+Сохраняет новый список проектов, который будет использоваться при генерации отчётов.
 
-Этот список будет использоваться при генерации отчётов,
-если не указаны конкретные проекты в запросе.
+После сохранения не нужно каждый раз указывать проекты в запросе —
+достаточно задать только период, и отчёт сформируется по сохранённому списку.
 
-**Важно:** Полностью заменяет текущий список.
+Чтобы узнать какие проекты доступны, сначала вызовите `GET /projects/available`.
     """,
 )
 async def set_default_projects(
@@ -141,66 +142,15 @@ async def set_default_projects(
     )
 
 
-@projects_router.post(
-    "/default/add",
-    response_model=ProjectOperationResponse,
-    summary="Добавить проект",
-    description="Добавляет проект в список по умолчанию.",
-)
-async def add_default_project(
-    request: AddProjectRequest,
-) -> ProjectOperationResponse:
-    """Добавляет проект в список по умолчанию."""
-    user_settings = get_user_settings()
-
-    if user_settings.add_project(request.project_name):
-        return ProjectOperationResponse(
-            success=True,
-            message=f'Проект "{request.project_name}" добавлен',
-            projects=user_settings.get_default_projects(),
-        )
-
-    return ProjectOperationResponse(
-        success=False,
-        message=f'Проект "{request.project_name}" уже в списке',
-        projects=user_settings.get_default_projects(),
-    )
-
-
-@projects_router.post(
-    "/default/remove",
-    response_model=ProjectOperationResponse,
-    summary="Удалить проект",
-    description="Удаляет проект из списка по умолчанию.",
-)
-async def remove_default_project(
-    request: RemoveProjectRequest,
-) -> ProjectOperationResponse:
-    """Удаляет проект из списка по умолчанию."""
-    user_settings = get_user_settings()
-
-    if user_settings.remove_project(request.project_name):
-        return ProjectOperationResponse(
-            success=True,
-            message=f'Проект "{request.project_name}" удалён',
-            projects=user_settings.get_default_projects(),
-        )
-
-    return ProjectOperationResponse(
-        success=False,
-        message=f'Проект "{request.project_name}" не найден в списке',
-        projects=user_settings.get_default_projects(),
-    )
-
-
 @projects_router.delete(
     "/default",
     response_model=ProjectOperationResponse,
-    summary="Сбросить на настройки из .env",
+    summary="Сбросить к встроенным значениям из кода",
     description="""
-Удаляет пользовательский список проектов.
+Удаляет сохранённый список проектов и возвращает встроенные значения из кода.
 
-После этого будет использоваться список из конфигурации (.env).
+Встроенные проекты заданы в коде приложения. Если в .env указан TARGET_PROJECTS,
+будет использован он, иначе — значения из кода.
     """,
 )
 async def reset_default_projects(
@@ -212,7 +162,7 @@ async def reset_default_projects(
 
     return ProjectOperationResponse(
         success=True,
-        message="Настройки сброшены. Используется список из .env",
+        message="Настройки сброшены. Используются встроенные значения из кода",
         projects=settings.target_projects,
     )
 
