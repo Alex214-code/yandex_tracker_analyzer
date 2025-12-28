@@ -132,10 +132,10 @@ docker run -d \
 
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/projects/available` | Все доступные проекты |
-| GET | `/projects/default` | Текущий список проектов по умолчанию |
-| PUT | `/projects/default` | Установить список проектов |
-| DELETE | `/projects/default` | Сбросить к настройкам из .env |
+| GET | `/projects/available` | Получить все доступные проекты из Yandex Tracker |
+| GET | `/projects/default` | Посмотреть текущий список проектов для отчётов |
+| PUT | `/projects/default` | Изменить список проектов по умолчанию |
+| DELETE | `/projects/default` | Сбросить список к начальным настройкам из .env |
 
 #### Отчёты
 
