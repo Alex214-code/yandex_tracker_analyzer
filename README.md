@@ -20,7 +20,7 @@ REST API сервис для генерации Excel-отчётов по зад
 1. **Первоначальная настройка** (один раз):
    - Откройте Swagger UI: `http://localhost:8000/docs`
    - Перейдите в раздел "Проекты"
-   - Вызовите `GET /projects/tracker` — получите список всех доступных проектов из Yandex Tracker
+   - Вызовите `GET /projects/filter-values` — получите список значений для фильтрации
    - Выберите нужные проекты и сохраните их через `PUT /projects/default`
 
 2. **Ежемесячная генерация отчёта**:
@@ -133,12 +133,16 @@ docker run -d \
 
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/projects/tracker` | Все проекты из Yandex Tracker |
+| GET | `/projects/filter-values` | Значения для фильтрации задач |
+| GET | `/projects/portfolios` | Проекты-портфолио Tracker (справочно) |
 | GET | `/projects/default` | Текущий список проектов по умолчанию |
 | PUT | `/projects/default` | Установить новый список проектов |
 | POST | `/projects/default/add` | Добавить проект в список |
 | POST | `/projects/default/remove` | Удалить проект из списка |
 | DELETE | `/projects/default` | Сбросить к настройкам из .env |
+
+Для получения списка проектов, которые можно использовать в отчётах,
+используйте `/projects/filter-values`, а не `/projects/portfolios`.
 
 #### Отчёты
 
@@ -149,10 +153,21 @@ docker run -d \
 
 ### Примеры запросов
 
-#### Получение списка всех проектов из Tracker
+#### Получение значений для фильтрации
 
 ```bash
-curl -X GET "http://localhost:8000/projects/tracker"
+curl -X GET "http://localhost:8000/projects/filter-values"
+```
+
+Вернёт список вроде:
+```json
+{
+  "values": [
+    "НорНикель НОФ (Тех. Поддержка)",
+    "УГМК Святогор (Тех. Поддержка)"
+  ],
+  "total": 2
+}
 ```
 
 #### Установка проектов по умолчанию
@@ -211,7 +226,7 @@ curl -X POST "http://localhost:8000/reports/generate" \
 ]
 ```
 
-**Важно:** Это значения кастомного поля `Project` на задачах в Tracker, а не "проекты" из API `/projects`. Endpoint `GET /projects/tracker` возвращает проекты-портфолио Yandex Tracker, которые могут не совпадать с нужными значениями.
+**Важно:** Это значения поля `Project` на задачах в Tracker. Чтобы получить актуальный список всех доступных значений, используйте `GET /projects/filter-values`.
 
 ## Хранение пользовательских настроек
 
