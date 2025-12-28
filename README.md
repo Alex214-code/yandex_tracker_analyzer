@@ -208,7 +208,7 @@ curl -X POST "http://localhost:8000/reports/generate" \
 
 ## Проекты по умолчанию
 
-Если `TARGET_PROJECTS` не указан в `.env`, используются встроенные значения:
+Если `TARGET_PROJECTS` не указан в `.env`, используются встроенные значения из кода:
 
 ```json
 [

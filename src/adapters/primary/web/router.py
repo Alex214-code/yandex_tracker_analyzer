@@ -147,7 +147,7 @@ async def set_default_projects(
     response_model=ProjectOperationResponse,
     summary="Сбросить к встроенным значениям из кода",
     description="""
-Удаляет сохранённый список проектов и возвращает встроенные значения по умолчанию.
+Удаляет сохранённый список проектов и возвращает встроенные значения из кода.
 
 Встроенные проекты заданы в коде приложения. Если в .env указан TARGET_PROJECTS,
 будет использован он, иначе — значения из кода.
@@ -162,7 +162,7 @@ async def reset_default_projects(
 
     return ProjectOperationResponse(
         success=True,
-        message="Настройки сброшены. Используется список из .env",
+        message="Настройки сброшены. Используются встроенные значения из кода",
         projects=settings.target_projects,
     )
 
