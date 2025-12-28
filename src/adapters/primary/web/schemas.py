@@ -116,12 +116,25 @@ class TrackerProjectInfo(BaseModel):
 
 
 class AllTrackerProjectsResponse(BaseModel):
-    """Ответ со списком всех проектов из Yandex Tracker."""
+    """Ответ со списком проектов-портфолио из Yandex Tracker."""
 
     projects: List[TrackerProjectInfo] = Field(
-        ..., description="Список всех проектов из Tracker"
+        ..., description="Список проектов-портфолио из Tracker"
     )
     total: int = Field(..., description="Общее количество проектов")
+
+
+class ProjectFilterValuesResponse(BaseModel):
+    """Ответ со списком значений поля Project для фильтрации задач."""
+
+    values: List[str] = Field(
+        ..., description="Уникальные значения поля Project из задач"
+    )
+    total: int = Field(..., description="Количество найденных значений")
+    note: str = Field(
+        default="Эти значения можно использовать для фильтрации задач в отчётах",
+        description="Подсказка по использованию",
+    )
 
 
 class DefaultProjectsResponse(BaseModel):

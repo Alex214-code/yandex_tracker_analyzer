@@ -17,16 +17,15 @@ from src.adapters.primary.web.dependencies import (
 )
 from src.adapters.primary.web.schemas import (
     AddProjectRequest,
-    AllTrackerProjectsResponse,
     DefaultProjectsResponse,
     ErrorResponse,
     HealthResponse,
+    ProjectFilterValuesResponse,
     ProjectOperationResponse,
     RemoveProjectRequest,
     ReportRequestSchema,
     ReportStatusResponse,
     SetDefaultProjectsRequest,
-    TrackerProjectInfo,
 )
 from src.core.application.use_cases import ReportRequest
 from src.settings import Settings
@@ -62,35 +61,27 @@ async def health_check(
 
 
 @projects_router.get(
-    "/tracker",
-    response_model=AllTrackerProjectsResponse,
-    summary="Все проекты из Tracker",
+    "/available",
+    response_model=ProjectFilterValuesResponse,
+    summary="Все доступные проекты",
     description="""
-Получает список ВСЕХ доступных проектов из Yandex Tracker.
+Получает список всех доступных проектов из Yandex Tracker.
 
-Используйте этот endpoint, чтобы узнать какие проекты существуют
-и затем выбрать нужные для выгрузки.
+Сервис анализирует задачи и возвращает уникальные названия проектов.
+Эти значения можно использовать для настройки списка по умолчанию
+или передать напрямую в `/reports/generate`.
     """,
 )
-async def get_all_tracker_projects(
+async def get_available_projects(
     settings: Settings = Depends(get_cached_settings),
-) -> AllTrackerProjectsResponse:
-    """Получает все проекты из Yandex Tracker API."""
+) -> ProjectFilterValuesResponse:
+    """Получает список всех доступных проектов."""
     tracker = get_tracker_adapter(settings)
-    raw_projects = tracker.get_all_projects()
+    values = tracker.get_unique_project_values()
 
-    projects = [
-        TrackerProjectInfo(
-            id=p.get("id"),
-            name=p.get("name", ""),
-            description=p.get("description", ""),
-        )
-        for p in raw_projects
-    ]
-
-    return AllTrackerProjectsResponse(
-        projects=projects,
-        total=len(projects),
+    return ProjectFilterValuesResponse(
+        values=values,
+        total=len(values),
     )
 
 

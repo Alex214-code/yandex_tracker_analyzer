@@ -210,20 +210,25 @@ class YandexTrackerAdapter(TrackerPort):
             resolved_at = self._parse_datetime(raw_data["resolvedAt"])
 
         parent_key = None
-        if raw_data.get("parent"):
-            parent_key = raw_data["parent"].get("key")
+        parent = raw_data.get("parent")
+        if parent and isinstance(parent, dict):
+            parent_key = parent.get("key")
+
+        # Безопасное извлечение assignee и priority (могут быть None)
+        assignee_data = raw_data.get("assignee") or {}
+        priority_data = raw_data.get("priority") or {}
 
         return Task(
             key=raw_data["key"],
             summary=raw_data["summary"],
             project=project_name,
-            assignee=raw_data.get("assignee", {}).get("display", "Не назначен"),
+            assignee=assignee_data.get("display", "Не назначен") if isinstance(assignee_data, dict) else "Не назначен",
             status=raw_data["status"]["key"],
             created=created_at,
             updated=updated_at,
             resolved=resolved_at,
             parent_key=parent_key,
-            priority=raw_data.get("priority", {}).get("display", ""),
+            priority=priority_data.get("display", "") if isinstance(priority_data, dict) else "",
         )
 
     def parse_status_changes(self, changelog: List[Dict]) -> List[TaskChange]:
@@ -235,13 +240,16 @@ class YandexTrackerAdapter(TrackerPort):
                 updated_at = self._parse_datetime(entry["updatedAt"])
 
                 for field in entry.get("fields", []):
-                    if field.get("field", {}).get("id") == "status":
+                    field_info = field.get("field") or {}
+                    if field_info.get("id") == "status":
+                        from_data = field.get("from") or {}
+                        to_data = field.get("to") or {}
                         changes.append(
                             TaskChange(
                                 timestamp=updated_at,
                                 field="status",
-                                old_value=field.get("from", {}).get("key", ""),
-                                new_value=field.get("to", {}).get("key", ""),
+                                old_value=from_data.get("key", "") if isinstance(from_data, dict) else "",
+                                new_value=to_data.get("key", "") if isinstance(to_data, dict) else "",
                             )
                         )
             except (KeyError, ValueError):
@@ -257,15 +265,18 @@ class YandexTrackerAdapter(TrackerPort):
 
     def get_all_projects(self) -> List[Dict]:
         """
-        Получает список всех доступных проектов из Yandex Tracker.
+        Получает список всех проектов-портфолио из Yandex Tracker.
+
+        Это НЕ те же проекты, что используются для фильтрации задач!
+        Для фильтрации используется поле "Project" на задачах.
 
         Returns:
-            Список проектов с полями id, name, description.
+            Список проектов-портфолио с полями id, name, description.
         """
         projects: List[Dict] = []
         page = 1
 
-        logger.info("Запрашиваю список всех проектов из Yandex Tracker...")
+        logger.info("Запрашиваю список проектов-портфолио из Yandex Tracker...")
 
         while True:
             try:
@@ -298,5 +309,72 @@ class YandexTrackerAdapter(TrackerPort):
                 logger.error(f"Ошибка при получении списка проектов: {e}")
                 break
 
-        logger.info(f"Найдено {len(projects)} проектов")
+        logger.info(f"Найдено {len(projects)} проектов-портфолио")
         return projects
+
+    def get_unique_project_values(self, limit: int = 500) -> List[str]:
+        """
+        Получает уникальные значения поля "Project" из задач.
+
+        Это значения, которые реально используются для фильтрации
+        при генерации отчётов.
+
+        Args:
+            limit: Максимальное количество задач для анализа.
+
+        Returns:
+            Отсортированный список уникальных значений поля Project.
+        """
+        unique_projects: set = set()
+        page = 1
+
+        logger.info("Запрашиваю уникальные значения поля Project из задач...")
+
+        while len(unique_projects) < 100:  # Ограничиваем уникальными значениями
+            try:
+                # Запрашиваем задачи с полем project
+                response = self._client.post(
+                    f"{self._base_url}/issues/_search",
+                    params={"perPage": 100, "page": page},
+                    json={
+                        "query": "\"Sort by\": Updated DESC",
+                        "fields": ["project"],
+                    },
+                )
+
+                if response.status_code == 429:
+                    logger.warning("Rate limit, ожидаю 5 сек...")
+                    time.sleep(5)
+                    continue
+
+                response.raise_for_status()
+                data = response.json()
+
+                if not data:
+                    break
+
+                for task in data:
+                    project_data = task.get("project")
+                    if project_data:
+                        # project может быть строкой или объектом с полем name
+                        if isinstance(project_data, dict):
+                            project_name = project_data.get("name") or project_data.get("display")
+                        else:
+                            project_name = str(project_data)
+
+                        if project_name:
+                            unique_projects.add(project_name)
+
+                page += 1
+
+                # Ограничиваем количество запросов
+                if page * 100 >= limit:
+                    break
+
+            except httpx.HTTPError as e:
+                logger.error(f"Ошибка при получении задач: {e}")
+                break
+
+        result = sorted(unique_projects)
+        logger.info(f"Найдено {len(result)} уникальных значений поля Project")
+        return result
