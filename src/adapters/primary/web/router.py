@@ -16,13 +16,11 @@ from src.adapters.primary.web.dependencies import (
     get_user_settings,
 )
 from src.adapters.primary.web.schemas import (
-    AddProjectRequest,
     DefaultProjectsResponse,
     ErrorResponse,
     HealthResponse,
     ProjectFilterValuesResponse,
     ProjectOperationResponse,
-    RemoveProjectRequest,
     ReportRequestSchema,
     ReportStatusResponse,
     SetDefaultProjectsRequest,
@@ -119,12 +117,12 @@ async def get_default_projects(
     response_model=ProjectOperationResponse,
     summary="Установить проекты по умолчанию",
     description="""
-Устанавливает новый список проектов по умолчанию.
+Устанавливает список проектов по умолчанию.
 
 Этот список будет использоваться при генерации отчётов,
 если не указаны конкретные проекты в запросе.
 
-**Важно:** Полностью заменяет текущий список.
+Чтобы узнать доступные проекты, используйте `GET /projects/available`.
     """,
 )
 async def set_default_projects(
@@ -138,58 +136,6 @@ async def set_default_projects(
         success=True,
         message=f"Установлено {len(request.projects)} проектов по умолчанию",
         projects=request.projects,
-    )
-
-
-@projects_router.post(
-    "/default/add",
-    response_model=ProjectOperationResponse,
-    summary="Добавить проект",
-    description="Добавляет проект в список по умолчанию.",
-)
-async def add_default_project(
-    request: AddProjectRequest,
-) -> ProjectOperationResponse:
-    """Добавляет проект в список по умолчанию."""
-    user_settings = get_user_settings()
-
-    if user_settings.add_project(request.project_name):
-        return ProjectOperationResponse(
-            success=True,
-            message=f'Проект "{request.project_name}" добавлен',
-            projects=user_settings.get_default_projects(),
-        )
-
-    return ProjectOperationResponse(
-        success=False,
-        message=f'Проект "{request.project_name}" уже в списке',
-        projects=user_settings.get_default_projects(),
-    )
-
-
-@projects_router.post(
-    "/default/remove",
-    response_model=ProjectOperationResponse,
-    summary="Удалить проект",
-    description="Удаляет проект из списка по умолчанию.",
-)
-async def remove_default_project(
-    request: RemoveProjectRequest,
-) -> ProjectOperationResponse:
-    """Удаляет проект из списка по умолчанию."""
-    user_settings = get_user_settings()
-
-    if user_settings.remove_project(request.project_name):
-        return ProjectOperationResponse(
-            success=True,
-            message=f'Проект "{request.project_name}" удалён',
-            projects=user_settings.get_default_projects(),
-        )
-
-    return ProjectOperationResponse(
-        success=False,
-        message=f'Проект "{request.project_name}" не найден в списке',
-        projects=user_settings.get_default_projects(),
     )
 
 
