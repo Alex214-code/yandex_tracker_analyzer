@@ -145,7 +145,7 @@ async def set_default_projects(
 @projects_router.delete(
     "/default",
     response_model=ProjectOperationResponse,
-    summary="Сбросить к встроенным настройкам",
+    summary="Сбросить к встроенным значениям из кода",
     description="""
 Удаляет сохранённый список проектов и возвращает встроенные значения по умолчанию.
 
