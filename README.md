@@ -20,7 +20,7 @@ REST API сервис для генерации Excel-отчётов по зад
 1. **Первоначальная настройка** (один раз):
    - Откройте Swagger UI: `http://localhost:8000/docs`
    - Перейдите в раздел "Проекты"
-   - Вызовите `GET /projects/filter-values` — получите список значений для фильтрации
+   - Вызовите `GET /projects/available` — получите список всех доступных проектов
    - Выберите нужные проекты и сохраните их через `PUT /projects/default`
 
 2. **Ежемесячная генерация отчёта**:
@@ -133,16 +133,12 @@ docker run -d \
 
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/projects/filter-values` | Значения для фильтрации задач |
-| GET | `/projects/portfolios` | Проекты-портфолио Tracker (справочно) |
+| GET | `/projects/available` | Все доступные проекты |
 | GET | `/projects/default` | Текущий список проектов по умолчанию |
 | PUT | `/projects/default` | Установить новый список проектов |
 | POST | `/projects/default/add` | Добавить проект в список |
 | POST | `/projects/default/remove` | Удалить проект из списка |
 | DELETE | `/projects/default` | Сбросить к настройкам из .env |
-
-Для получения списка проектов, которые можно использовать в отчётах,
-используйте `/projects/filter-values`, а не `/projects/portfolios`.
 
 #### Отчёты
 
@@ -153,13 +149,13 @@ docker run -d \
 
 ### Примеры запросов
 
-#### Получение значений для фильтрации
+#### Получение всех доступных проектов
 
 ```bash
-curl -X GET "http://localhost:8000/projects/filter-values"
+curl -X GET "http://localhost:8000/projects/available"
 ```
 
-Вернёт список вроде:
+Вернёт список:
 ```json
 {
   "values": [
@@ -226,7 +222,7 @@ curl -X POST "http://localhost:8000/reports/generate" \
 ]
 ```
 
-**Важно:** Это значения поля `Project` на задачах в Tracker. Чтобы получить актуальный список всех доступных значений, используйте `GET /projects/filter-values`.
+Чтобы получить актуальный список всех доступных проектов, используйте `GET /projects/available`.
 
 ## Хранение пользовательских настроек
 

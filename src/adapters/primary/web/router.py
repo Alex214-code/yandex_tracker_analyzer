@@ -17,7 +17,6 @@ from src.adapters.primary.web.dependencies import (
 )
 from src.adapters.primary.web.schemas import (
     AddProjectRequest,
-    AllTrackerProjectsResponse,
     DefaultProjectsResponse,
     ErrorResponse,
     HealthResponse,
@@ -27,7 +26,6 @@ from src.adapters.primary.web.schemas import (
     ReportRequestSchema,
     ReportStatusResponse,
     SetDefaultProjectsRequest,
-    TrackerProjectInfo,
 )
 from src.core.application.use_cases import ReportRequest
 from src.settings import Settings
@@ -63,66 +61,27 @@ async def health_check(
 
 
 @projects_router.get(
-    "/filter-values",
+    "/available",
     response_model=ProjectFilterValuesResponse,
-    summary="Значения для фильтрации задач",
+    summary="Все доступные проекты",
     description="""
-Получает список значений поля "Project" из реальных задач.
+Получает список всех доступных проектов из Yandex Tracker.
 
-Именно эти значения нужно использовать для генерации отчётов.
-
-Сервис анализирует недавние задачи и извлекает уникальные
-значения поля Project. Эти значения можно:
-- Скопировать и использовать в `/projects/default`
-- Передать напрямую в `/reports/generate`
+Сервис анализирует задачи и возвращает уникальные названия проектов.
+Эти значения можно использовать для настройки списка по умолчанию
+или передать напрямую в `/reports/generate`.
     """,
 )
-async def get_project_filter_values(
+async def get_available_projects(
     settings: Settings = Depends(get_cached_settings),
 ) -> ProjectFilterValuesResponse:
-    """Получает уникальные значения поля Project из задач."""
+    """Получает список всех доступных проектов."""
     tracker = get_tracker_adapter(settings)
     values = tracker.get_unique_project_values()
 
     return ProjectFilterValuesResponse(
         values=values,
         total=len(values),
-    )
-
-
-@projects_router.get(
-    "/portfolios",
-    response_model=AllTrackerProjectsResponse,
-    summary="Проекты-портфолио Tracker (справочно)",
-    description="""
-Получает список проектов-портфолио из Yandex Tracker API.
-
-Это не те значения, что используются для фильтрации задач.
-Для фильтрации задач используйте `/projects/filter-values`.
-
-Этот endpoint показывает "Проекты" (Projects) в терминологии Yandex Tracker —
-проекты-портфолио для группировки работ, а не значения поля на задачах.
-    """,
-)
-async def get_tracker_portfolios(
-    settings: Settings = Depends(get_cached_settings),
-) -> AllTrackerProjectsResponse:
-    """Получает проекты-портфолио из Yandex Tracker API."""
-    tracker = get_tracker_adapter(settings)
-    raw_projects = tracker.get_all_projects()
-
-    projects = [
-        TrackerProjectInfo(
-            id=p.get("id"),
-            name=p.get("name", ""),
-            description=p.get("description", ""),
-        )
-        for p in raw_projects
-    ]
-
-    return AllTrackerProjectsResponse(
-        projects=projects,
-        total=len(projects),
     )
 
 
