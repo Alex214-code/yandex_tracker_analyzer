@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from loguru import logger
 
 from src.adapters.primary.web import projects_router, reports_router, system_router
+from src.adapters.secondary.user_settings import UserSettingsAdapter
 from src.settings import get_settings
 
 
@@ -54,7 +55,16 @@ async def lifespan(app: FastAPI):
 
     logger.info(f"Запуск {settings.app_name} v{settings.app_version}")
     logger.info(f"Режим отладки: {settings.debug}")
-    logger.info(f"Целевые проекты: {settings.target_projects}")
+    logger.info(f"Проекты из конфигурации (.env): {settings.target_projects}")
+
+    # Проверяем пользовательские настройки
+    user_settings = UserSettingsAdapter()
+    user_projects = user_settings.get_default_projects()
+    if user_projects:
+        logger.info(f"Проекты из user_settings.json: {user_projects}")
+        logger.info("При генерации отчёта будут использованы проекты из user_settings.json")
+    else:
+        logger.info("Пользовательские настройки не заданы, используются проекты из конфигурации")
 
     yield
 

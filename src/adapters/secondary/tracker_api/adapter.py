@@ -210,20 +210,25 @@ class YandexTrackerAdapter(TrackerPort):
             resolved_at = self._parse_datetime(raw_data["resolvedAt"])
 
         parent_key = None
-        if raw_data.get("parent"):
-            parent_key = raw_data["parent"].get("key")
+        parent = raw_data.get("parent")
+        if parent and isinstance(parent, dict):
+            parent_key = parent.get("key")
+
+        # Безопасное извлечение assignee и priority (могут быть None)
+        assignee_data = raw_data.get("assignee") or {}
+        priority_data = raw_data.get("priority") or {}
 
         return Task(
             key=raw_data["key"],
             summary=raw_data["summary"],
             project=project_name,
-            assignee=raw_data.get("assignee", {}).get("display", "Не назначен"),
+            assignee=assignee_data.get("display", "Не назначен") if isinstance(assignee_data, dict) else "Не назначен",
             status=raw_data["status"]["key"],
             created=created_at,
             updated=updated_at,
             resolved=resolved_at,
             parent_key=parent_key,
-            priority=raw_data.get("priority", {}).get("display", ""),
+            priority=priority_data.get("display", "") if isinstance(priority_data, dict) else "",
         )
 
     def parse_status_changes(self, changelog: List[Dict]) -> List[TaskChange]:
@@ -235,13 +240,16 @@ class YandexTrackerAdapter(TrackerPort):
                 updated_at = self._parse_datetime(entry["updatedAt"])
 
                 for field in entry.get("fields", []):
-                    if field.get("field", {}).get("id") == "status":
+                    field_info = field.get("field") or {}
+                    if field_info.get("id") == "status":
+                        from_data = field.get("from") or {}
+                        to_data = field.get("to") or {}
                         changes.append(
                             TaskChange(
                                 timestamp=updated_at,
                                 field="status",
-                                old_value=field.get("from", {}).get("key", ""),
-                                new_value=field.get("to", {}).get("key", ""),
+                                old_value=from_data.get("key", "") if isinstance(from_data, dict) else "",
+                                new_value=to_data.get("key", "") if isinstance(to_data, dict) else "",
                             )
                         )
             except (KeyError, ValueError):
