@@ -85,9 +85,13 @@ poetry install
 
 4. Создайте файл `.env` (см. `.env.example`):
 ```bash
+# Linux/macOS
 cp .env.example .env
-# Заполните реальными значениями
+
+# Windows CMD
+copy .env.example .env
 ```
+Заполните файл реальными значениями.
 
 5. Запустите сервер:
 ```bash
