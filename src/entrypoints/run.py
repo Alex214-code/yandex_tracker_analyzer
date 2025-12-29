@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
 
     logger.info(f"Запуск {settings.app_name} v{settings.app_version}")
     logger.info(f"Режим отладки: {settings.debug}")
-    logger.info(f"Проекты из конфигурации (.env): {settings.target_projects}")
+    logger.info(f"Встроенные проекты из кода: {settings.target_projects}")
 
     # Проверяем пользовательские настройки
     user_settings = UserSettingsAdapter()
@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"Проекты из user_settings.json: {user_projects}")
         logger.info("При генерации отчёта будут использованы проекты из user_settings.json")
     else:
-        logger.info("Пользовательские настройки не заданы, используются проекты из конфигурации")
+        logger.info("Пользовательские настройки не заданы, используются встроенные проекты из кода")
 
     yield
 
@@ -91,8 +91,8 @@ def create_app() -> FastAPI:
 отчёты для руководства без привлечения программистов.
 
 ### Быстрый старт:
-1. **Настройте проекты**: `/projects/tracker` — посмотреть все доступные проекты
-2. **Сохраните список**: `/projects/default` — установить проекты по умолчанию
+1. **Посмотрите проекты**: `/projects/available` — все доступные проекты
+2. **Настройте список**: `/projects/default` — установить проекты по умолчанию
 3. **Генерируйте отчёт**: `/reports/generate` — получить Excel-файл
 
 ### Возможности:
