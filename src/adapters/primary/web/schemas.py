@@ -143,7 +143,7 @@ class DefaultProjectsResponse(BaseModel):
     projects: List[str] = Field(..., description="Список проектов по умолчанию")
     source: str = Field(
         ...,
-        description="Источник настроек: 'user_settings' или 'env_config'",
+        description="Источник настроек: 'user_settings' или 'builtin'",
     )
 
 

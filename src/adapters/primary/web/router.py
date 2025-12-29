@@ -94,7 +94,7 @@ async def get_available_projects(
 
 В ответе указан источник настроек:
 - `user_settings` — список был изменён через `PUT /projects/default`
-- `env_config` — используются начальные настройки из файла .env
+- `builtin` — используются встроенные значения из кода
     """,
 )
 async def get_default_projects(
@@ -111,7 +111,7 @@ async def get_default_projects(
 
     return DefaultProjectsResponse(
         projects=settings.target_projects,
-        source="env_config",
+        source="builtin",
     )
 
 
