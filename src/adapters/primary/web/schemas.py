@@ -189,4 +189,4 @@ class ProjectOperationResponse(BaseModel):
 
     success: bool = Field(..., description="Успешность операции")
     message: str = Field(..., description="Сообщение о результате")
-    projects: List[str] = Field(..., description="Текущий список проектов")
+    projects: List[str] = Field(..., description="Список проектов по умолчанию")

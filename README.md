@@ -133,7 +133,7 @@ docker run -d \
 | Метод | URL | Описание |
 |-------|-----|----------|
 | GET | `/projects/available` | Получить все доступные проекты из Yandex Tracker |
-| GET | `/projects/default` | Посмотреть текущий список проектов для отчётов |
+| GET | `/projects/default` | Посмотреть список проектов по умолчанию |
 | PUT | `/projects/default` | Изменить список проектов по умолчанию |
 | DELETE | `/projects/default` | Сбросить список к встроенным значениям из кода |
 
