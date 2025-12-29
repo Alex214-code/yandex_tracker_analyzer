@@ -88,13 +88,16 @@ async def get_available_projects(
 @projects_router.get(
     "/default",
     response_model=DefaultProjectsResponse,
-    summary="Посмотреть текущий список проектов",
+    summary="Посмотреть список проектов по умолчанию",
     description="""
-Показывает, какие проекты сейчас используются для генерации отчётов.
+Показывает, какие проекты используются для генерации отчётов по умолчанию.
+
+Если список не был изменён через `PUT /projects/default`, возвращаются
+встроенные значения из кода.
 
 В ответе указан источник настроек:
 - `user_settings` — список был изменён через `PUT /projects/default`
-- `env_config` — используются начальные настройки из файла .env
+- `builtin` — используются встроенные значения из кода
     """,
 )
 async def get_default_projects(
@@ -111,7 +114,7 @@ async def get_default_projects(
 
     return DefaultProjectsResponse(
         projects=settings.target_projects,
-        source="env_config",
+        source="builtin",
     )
 
 

@@ -143,7 +143,7 @@ class DefaultProjectsResponse(BaseModel):
     projects: List[str] = Field(..., description="Список проектов по умолчанию")
     source: str = Field(
         ...,
-        description="Источник настроек: 'user_settings' или 'env_config'",
+        description="Источник настроек: 'user_settings' или 'builtin'",
     )
 
 
@@ -189,4 +189,4 @@ class ProjectOperationResponse(BaseModel):
 
     success: bool = Field(..., description="Успешность операции")
     message: str = Field(..., description="Сообщение о результате")
-    projects: List[str] = Field(..., description="Текущий список проектов")
+    projects: List[str] = Field(..., description="Список проектов по умолчанию")
