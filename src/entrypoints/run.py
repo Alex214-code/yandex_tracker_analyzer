@@ -55,16 +55,16 @@ async def lifespan(app: FastAPI):
 
     logger.info(f"Запуск {settings.app_name} v{settings.app_version}")
     logger.info(f"Режим отладки: {settings.debug}")
-    logger.info(f"Встроенные проекты из кода: {settings.target_projects}")
 
     # Проверяем пользовательские настройки
     user_settings = UserSettingsAdapter()
     user_projects = user_settings.get_default_projects()
     if user_projects:
-        logger.info(f"Проекты из user_settings.json: {user_projects}")
         logger.info("При генерации отчёта будут использованы проекты из user_settings.json")
+        logger.info(f"Проекты из user_settings.json: {user_projects}")
     else:
-        logger.info("Пользовательские настройки не заданы, используются встроенные проекты из кода")
+        logger.info("Пользовательские настройки не заданы, используются проекты по умолчанию из кода")
+        logger.info(f"Проекты по умолчанию из кода: {settings.target_projects}")
 
     yield
 
